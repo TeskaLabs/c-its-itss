@@ -1,0 +1,353 @@
+ITStandp0v0 { itu-t(0) identified-organization(4) etsi(0) itsDomain(5) wg5(5) itstandp(2941) operation(0) version0(0)}
+
+DEFINITIONS AUTOMATIC TAGS ::=
+BEGIN
+
+EnrolmentRequest ::= SEQUENCE {
+	signerEnrolRequest 	SignerIdentifier,
+	enrolCertRequest 	ToBeSignedEnrolmentCertificateRequest,
+	signature 			Signature
+}
+
+EnrolmentResponse ::= CHOICE  {
+	successfulEnrolment SuccesfulEnrolment,
+	failedEnrolment FailedEnrolment
+}
+
+SuccesfulEnrolment ::= SEQUENCE {
+	ackRequest		NotRequested,
+	signedCertChain	CertificateChain,
+	crlPath			NullCrl
+}
+
+AuthorizationRequest ::= SEQUENCE  {
+	signerAuthRequest SignerIdentifier,
+	authCertRequest  AuthCertRequest,
+	signature Signature
+}
+
+AuthorizationResponse ::= CHOICE  {
+	successfulExplicitAuthorization SuccessfulExplicitAuthorization,
+	-- TODO: successfulImplicitAuthorization SuccessfulImplicitAuthorization,
+	failedAuthorization FailedAuthorization
+}
+
+AuthCertRequest ::= CHOICE {
+	anonRequest		ToBeSignedAuthCertReq-anon,
+	idNonLocRequest	ToBeSignedAuthCertReq-idNonLoc,
+	idLocRequest	ToBeSignedAuthCertReq-idLoc
+}
+
+ToBeSignedEnrolmentCertificateRequest ::= SEQUENCE {
+	versionAndType			ImplicitOrExplicit,
+	requestTime				ItsTime,
+	subjectType				SecDataExchCsr,
+	cf 						UseStartVal-AndOr-Lifetime,
+	enrolCertSpecificData	SecDataExchCaCertSpecificData,
+	expiration				ItsTime,
+	startValidity			ItsTime OPTIONAL,
+	lifetime 				CertificateDuration OPTIONAL,
+	verificationKey			PublicKey,
+	responseEncryptionKey	PublicKey
+}
+
+ToBeSignedAuthCertReq-anon ::= SEQUENCE {
+	versionAndType 			ImplicitOrExplicit,
+	requestTime 			ItsTime,
+	subjectType 			SecDataExchAnon,
+	cf 						UseStartVal-AndOr-Lifetime,
+	authCertSpecificData	SecDataExchAnonymousCertSpecificData,
+	startValidity 			ItsTime OPTIONAL,
+	lifetime 				CertificateDuration OPTIONAL,
+	responseEncryptionKey	PublicKey
+}
+
+ToBeSignedAuthCertReq-idNonLoc ::= SEQUENCE {
+	versionAndType 			ImplicitOrExplicit,
+	requestTime 			ItsTime,
+	subjectType 			SecDataExchAnon,
+	cf 						UseStartVal-AndOr-Lifetime,
+	authCertSpecificData	SecDataExchIdentifiedNotLocalizedCertSpecificData,
+	startValidity 			ItsTime OPTIONAL,
+	lifetime 				CertificateDuration OPTIONAL,
+	responseEncryptionKey	PublicKey	
+}
+
+ToBeSignedAuthCertReq-idLoc ::= SEQUENCE {
+	versionAndType 			ImplicitOrExplicit,
+	requestTime 			ItsTime,
+	subjectType 			SecDataExchAnon,
+	cf 						UseStartVal-AndOr-Lifetime,
+	authCertSpecificData	SecDataExchIdentifiedLocalizedCertSpecificData,
+	startValidity 			ItsTime OPTIONAL,
+	lifetime 				CertificateDuration OPTIONAL,
+	responseEncryptionKey	PublicKey	
+}
+
+
+CertificateChain ::= SEQUENCE {
+	intermediateCerts SEQUENCE OF IntermediateCertificate,
+	rootCertificate	RootCertificate
+}
+
+RootCertificate ::= ExplicitCertificate
+
+IntermediateCertificate ::= CHOICE  {
+	explicitCertificate ExplicitCertificate
+	-- implicitCertificate ImplicitCertificate
+}
+
+ExplicitCertificate ::= OCTET STRING
+
+FailedEnrolment ::= FailedCertResponse
+
+FailedAuthorization ::= FailedCertResponse
+
+SuccessfulExplicitAuthorization ::= SEQUENCE {
+	ackRequest NotRequested,
+	signedCertChain CertificateChain,
+	crlPath Crl
+}
+
+FailedCertResponse ::= SEQUENCE  {
+	signerEnrolResp	SignerIdentifier,
+	requestHash OCTET STRING (SIZE (10)),
+	enrolResult CertificateRequestErrorCode,
+	signature Signature
+}
+
+CertificateRequestErrorCode ::= ENUMERATED  {
+	verification-failure(0),
+	csr-cert-expired(1),
+	csr-cert-revoked(2),
+	csr-cert-unauthorized(3),
+	request-denied(4),
+	csr-cert-unknown (5),
+	canonical-identity-unknown (6)
+}
+
+SignerIdentifier ::= SEQUENCE  {
+	type    Integer8,
+	digest  CertId8,
+	id      OCTET STRING
+}
+
+SignerIdentifierType ::= Integer8
+	self							SignerIdentifierType  ::= 0
+	certificateDigestWithEcdsap224	SignerIdentifierType  ::= 1
+	certificateDigestWithEcdsap256	SignerIdentifierType  ::= 2
+	certificate 					SignerIdentifierType  ::= 3
+	certificateChain				SignerIdentifierType  ::= 4
+	unknownSigner					SignerIdentifierType  ::= 5
+
+SignerIdType ::= SignerIdentifierType (certificate | certificateChain)
+
+CertId8 ::= OCTET STRING (SIZE (8))
+
+VersionAndType ::= Integer8
+	explicitCert VersionAndType ::= 2
+	implicitCert VersionAndType ::= 3
+  ExplicitCert ::= VersionAndType (explicitCert)
+  ImplicitCert ::= VersionAndType (implicitCert)
+  ImplicitOrExplicit ::= VersionAndType (explicitCert | implicitCert)
+
+SubjectType ::= Integer8
+	secDataExchAnonymousSubj				SubjectType ::= 0
+	secDataExchIdentifiedNotLocalizedSubj	SubjectType ::= 1
+	secDataExchidentifiedLocalizedSubj 		SubjectType ::= 2
+	secDataExchCsrSubj						SubjectType ::= 3
+	wsaSubj									SubjectType ::= 4
+	wsaCsrSubj								SubjectType ::= 5
+	secDataExchCaSubj 						SubjectType ::= 6
+	rootCaSubj 								SubjectType ::= 255
+  SecDataExchCa ::= SubjectType (secDataExchCaSubj)
+  RootCa ::= SubjectType (rootCaSubj)
+  SecDataExchCsr ::= SubjectType (secDataExchCsrSubj)
+  SecDataExchAnon ::= SubjectType (secDataExchAnonymousSubj)
+  SecDataExchIdNonLoc ::= SubjectType (secDataExchIdentifiedNotLocalizedSubj)
+  SecDataExchIdLoc ::= SubjectType (secDataExchidentifiedLocalizedSubj)
+  SecDataExchCaTypes ::= SubjectType (secDataExchAnonymousSubj | secDataExchidentifiedLocalizedSubj)
+  IntermediateCert ::= SubjectType (ALL) -- Correct is ALL EXCEPT (rootCaSubj)
+
+CertificateContentFlags ::= BIT STRING  {
+	useStartValidity   (0),
+	lifetimeIsDuration (1),
+	encryptionKey      (2)
+}
+  UseStartValidity ::= CertificateContentFlags({useStartValidity})
+  LifetimeIsDuration ::= CertificateContentFlags({lifetimeIsDuration})
+  UseStartVal-AndOr-Lifetime ::= CertificateContentFlags(ALL) --  Correct is ({useStartValidity} | (ALL EXCEPT {encryptionKey}) )
+
+SecDataExchCaCertSpecificData ::= SecDataExchCaScope
+SecDataExchAnonymousCertSpecificData ::= AnonymousScope
+SecDataExchIdentifiedNotLocalizedCertSpecificData ::= IdentifiedNotLocalizedScope
+SecDataExchIdentifiedLocalizedCertSpecificData ::= IdentifiedScope
+
+SecDataExchCaScope ::= SEQUENCE {
+	eaId					IA5String (SIZE (0..32)),	-- name of EA
+	permittedSubjectTypes	SecDataExchCaTypes,
+ 	permissions				PsidArray,
+ 	region					GeographicRegion
+}
+
+IdentifiedScope ::= SEQUENCE {
+	subject-name			OCTET STRING,
+	permissions				PsidSspArray
+}
+
+IdentifiedNotLocalizedScope ::= SEQUENCE  {
+	subject-name 			OCTET STRING,
+	permissions 			PsidSspArray
+}
+
+AnonymousScope ::= SEQUENCE  {
+	additional-data			OCTET STRING,
+	permissions				PsidSspArray,
+	region					GeographicRegion
+}
+
+PsidSspArray ::= SEQUENCE {
+	type 				SpecifiedArray,
+	permissions-list	PsidSspList
+}
+
+PsidSsp ::= SEQUENCE {
+	its-aid     ITS-AID,
+	ssp SSP
+}
+
+PsidSspList ::= SEQUENCE OF PsidSsp
+
+SSP ::= OCTET STRING
+
+PsidArray ::= SEQUENCE {
+	type 				ArrayType,
+	permissions-list	PsidList
+}
+
+ArrayType  ::= Integer8
+	fromIssuer 	ArrayType  ::= 0
+	specified 	ArrayType  ::= 1
+	unknownType	ArrayType  ::= 2
+  SpecifiedArray ::= ArrayType (specified)
+
+PsidList ::= SEQUENCE OF Psid
+
+Psid ::= CHOICE {
+	its-aid		ITS-AID,
+	port 		Port
+}
+
+ITS-AID ::= OCTET STRING (SIZE (1..4))
+
+Port ::= SEQUENCE  {
+	portIndicator	PortIndicator,
+	portNumber		PortNumber
+}
+
+PortIndicator ::= OCTET STRING (SIZE (1))
+
+PortNumber ::= OCTET STRING (SIZE (2))
+
+GeographicRegion ::= SEQUENCE  {
+	region-type			RegionType,
+	circlular-region	CircularRegion OPTIONAL,
+	rectangular-region	RectangularRegion OPTIONAL,
+	polygonial-region	PolygonialRegion OPTIONAL,
+	other-region		OCTET STRING OPTIONAL
+}
+
+RegionType  ::= Integer8
+
+CircularRegion ::= SEQUENCE  {
+	center	TwoDLocation,
+	radius	Integer16
+}
+
+RectangularRegion ::=  SEQUENCE {
+	upper-left	TwoDLocation,
+	lower-right	TwoDLocation
+}
+
+PolygonialRegion ::= SEQUENCE OF TwoDLocation
+
+TwoDLocation ::= SEQUENCE  {
+	latitude	Sint32,
+	longitude	Sint32
+}
+
+CertificateDuration ::= SEQUENCE {
+	timeUnit  TimeUnit,
+	timeValue INTEGER (0..8191)
+}
+
+PublicKey ::= SEQUENCE {
+	algorithm	PKAlgorithm,
+	public-key	EccPublicKey
+}
+
+PKAlgorithm ::= INTEGER
+	ecdsaNistp224WithSha224 PKAlgorithm ::= 0
+	ecdsaNistp256WithSha256 PKAlgorithm ::= 1
+	eciesNistp256 PKAlgorithm ::= 2
+	unknownAlgorithm PKAlgorithm ::= 3
+
+EccPublicKey ::= SEQUENCE {
+	type 	EccPublicKeyType,
+	x		CHOICE  {
+				ecdsa-nistp224-with-sha224-X Integer28,
+				ecdsa-nistp256-with-sha256-X Integer32
+			},
+	y 		CHOICE  {
+				ecdsa-nistp224-with-sha224-Y Integer28,
+				ecdsa-nistp256-with-sha256-Y Integer32
+			} OPTIONAL
+}
+
+EccPublicKeyType ::= ENUMERATED {
+	xCoordinateOnly (0),
+	compressedLsbY0 (2),
+	compressedLsbY1 (3),
+	uncompressed    (4)
+}
+
+Signature  ::= EcdsaSignature
+
+EcdsaSignature ::= SEQUENCE {
+	r 	EccPublicKey,
+	s 	CHOICE {
+		ecdsa-nistp224-with-sha224-s Integer28,
+		ecdsa-nistp256-with-sha256-s Integer32
+	}
+}
+
+AcknowledgeRequest ::= BOOLEAN
+	requested AcknowledgeRequest ::= TRUE
+	notRequested AcknowledgeRequest ::= FALSE
+  Requested ::= AcknowledgeRequest (requested)
+  NotRequested ::= AcknowledgeRequest (notRequested)
+
+TimeUnit  ::= Integer3
+	seconds		TimeUnit  ::= 0
+	minutes		TimeUnit  ::= 1
+	hours		TimeUnit  ::= 2
+	sixtyHours	TimeUnit  ::= 3
+	years		TimeUnit  ::= 4
+
+Crl ::= CHOICE {
+	-- TODO: validCrl ValidCrl,
+	nullCrl NullCrl
+}
+
+NullCrl ::= NULL
+
+ItsTime ::= Integer32
+
+Integer3 	::= INTEGER (0..7)
+Integer8 	::= INTEGER (0..255)
+Integer16	::= INTEGER (0..65535)
+Integer28	::= INTEGER (0..268435456)
+Integer32	::= INTEGER (0..4294967295)
+Sint32		::= INTEGER (-65535..65535)
+
+END
