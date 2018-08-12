@@ -51,6 +51,18 @@ It is a set of standards that describes data exchange between high-speed vehicle
            --g5-sim G5_SIM       Configuration of G5 simulator
 
 
+## First start
+
+        $ mkdir itssA
+        $ ./itss.py itssA
+        Enrollment finished successfuly.
+        Authorization ticket obtained successfuly.
+        ITS-S identity: 14bc1ff472886760f630d7a50607013e8dc079d23b54cd62ac014ae4cffecd79e3f9d94268acd1411bce9554487653a6
+        AT digest: 3618365b33dc6a3d
+        Ready.
+        Received verified message b'payload' from [3618365b33dc6a3d/authorization_ticket]
+        ...
+
 ## C-ITS standards
 
   * ETSI TS 102 941 v1.1.1
