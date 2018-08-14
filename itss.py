@@ -7,6 +7,8 @@ import sys
 import os
 import asyncio
 import traceback
+import platform
+import uuid
 
 import requests
 
@@ -52,7 +54,7 @@ class ITSS(object):
 		self.EC = None
 
 
-	def enroll(self):
+	def enroll(self, enrollment_id):
 		'''
 		Send Enrollment request to Enrollment Authority and process the response.
 		The process is described in CITS / ETSI TS 102 941 V1.1.1
@@ -79,7 +81,7 @@ class ITSS(object):
 			{
 				'type': 3, # SignerIdType.certificate (fixed)
 				'digest': b'12345678',
-				'id': b'This is the identification of the signer', # Can be used to link request with a preauthorization at EA
+				'id': enrollment_id.encode('utf-8'), # Can be used to link request with a preauthorization at EA
 			},
 			'enrolCertRequest':
 			{
@@ -173,7 +175,7 @@ class ITSS(object):
 			'signerAuthRequest': {
 				'type': 3, # SignerIdType.certificate (fixed)
 				'digest': self.EC.Digest,
-				'id': b'',
+				'id': uuid.uuid4().hex.encode('ascii'), #TODO: Check if this is pseudorandom ID
 			},
 
 			'authCertRequest' : ('anonRequest', {
@@ -309,12 +311,16 @@ class ITSS(object):
 
 		cert_fname = os.path.join(self.Directory, "certs", digest.hex() + '.cert')
 
+		cert = None
 		try:
 			f = open(cert_fname, 'rb')
 			data = f.read()
 			cert = itss.CITS103097v121Certificate(data)
 
 		except FileNotFoundError:
+			cert = None
+
+		if cert is None:
 			r = requests.get(self.AA_url + '/cits/digest/{}'.format(digest.hex()))
 			cert = itss.CITS103097v121Certificate(r.content)
 			self.store_certificate(cert)
@@ -354,7 +360,10 @@ Copyright (c) 2018 Ales Teska, TeskaLabs Ltd, MIT Licence
 		store = True
 
 	if itss_obj.EC is None:
-		itss_obj.enroll()
+		# Enrollment Id is an pre-approved identification of the ITS-S from the manufacturer (e.g. Serial Number)
+		# It should also contain an information about the vendor
+		enrollment_id = 'itss.py/{}/{}'.format(platform.node(), uuid.uuid4())
+		itss_obj.enroll(enrollment_id)
 		store = True
 
 	if itss_obj.AT is None:
