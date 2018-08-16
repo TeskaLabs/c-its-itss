@@ -35,7 +35,10 @@ class ITSS(object):
 		self.EC = None # Enrollment credentials
 		self.AT = None # Authorization ticket
 
+		if not os.path.isdir(directory):
+			os.mkdir(directory)
 		self.Directory = directory
+
 		self.AA_url = aa_url
 		self.EA_url = ea_url
 
