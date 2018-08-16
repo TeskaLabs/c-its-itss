@@ -30,8 +30,7 @@ class ITSS(object):
 	asn1 = asn1tools.compile_files(fname, 'der')
 
 
-	def __init__(self, directory, ea_url, aa_url):
-		self.PrivateKey = None
+	def __init__(self, directory, ea_url, aa_url, hsm):
 		self.EC = None # Enrollment credentials
 		self.AT = None # Authorization ticket
 
@@ -48,13 +47,20 @@ class ITSS(object):
 		if not os.path.isdir(cert_dir):
 			os.mkdir(cert_dir)
 
+		if hsm == 'emulated':
+			import itss.hsm_emulated
+			self.HSM = itss.hsm_emulated.EmulatedHSM(self.Directory)
+		elif hsm == 'cicada':
+			import itss.hsm_cicada
+			self.HSM = itss.hsm_cicada.CicadaHSM()
+		else:
+			raise RuntimeError("Unknown/unsupported HSM '{}'".format(hsm))
+
 
 	def generate_private_key(self):
-		self.PrivateKey = cryptography.hazmat.primitives.asymmetric.ec.generate_private_key(
-			cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
-			cryptography.hazmat.backends.default_backend()
-		)
+		self.HSM.generate_private_key()
 		self.EC = None
+		self.AT = None
 
 
 	def enroll(self, enrollment_id):
@@ -63,7 +69,7 @@ class ITSS(object):
 		The process is described in CITS / ETSI TS 102 941 V1.1.1
 		'''
 
-		verification_public_key = self.PrivateKey.public_key()
+		verification_public_key = self.HSM.get_public_key()
 		verification_public_numbers = verification_public_key.public_numbers()
 
 		response_encryption_private_key = cryptography.hazmat.primitives.asymmetric.ec.generate_private_key(
@@ -136,13 +142,7 @@ class ITSS(object):
 		encoded_er += struct.pack(">B", 0xa1) + self.asn1.encode('ToBeSignedEnrolmentCertificateRequest', EnrolmentRequest['enrolCertRequest'])[1:]
 
 		# Sign with ecdsa_nistp256_with_sha256
-		signature_RFC3279 = self.PrivateKey.sign(
-			encoded_er,
-			cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
-				cryptography.hazmat.primitives.hashes.SHA256()
-			)
-		)
-		r, s = cryptography.hazmat.primitives.asymmetric.utils.decode_dss_signature(signature_RFC3279)
+		r, s = self.HSM.sign(encoded_er)
 
 		EnrolmentRequest['signature'] = {
 			'r': {
@@ -215,13 +215,7 @@ class ITSS(object):
 		encoded_ar += struct.pack(">B", 0xa1) + itss.encode_der_length(len(acr)) + acr
 
 		# Sign with ecdsa_nistp256_with_sha256
-		signature_RFC3279 = self.PrivateKey.sign(
-			encoded_ar,
-			cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
-				cryptography.hazmat.primitives.hashes.SHA256()
-			)
-		)
-		r, s = cryptography.hazmat.primitives.asymmetric.utils.decode_dss_signature(signature_RFC3279)
+		r, s = self.HSM.sign(encoded_ar)
 
 		AuthorizationRequest['signature'] = {
 			'r': {
@@ -251,12 +245,7 @@ class ITSS(object):
 
 
 	def store(self):
-		x = self.PrivateKey.private_bytes(
-			encoding=cryptography.hazmat.primitives.serialization.Encoding.DER,
-			format=cryptography.hazmat.primitives.serialization.PrivateFormat.PKCS8,
-			encryption_algorithm=cryptography.hazmat.primitives.serialization.BestAvailableEncryption(b'strong-and-secret :-)')
-		)
-		open(os.path.join(self.Directory, 'itss.key'),'wb').write(x)
+		self.HSM.store()
 
 		if self.EC is not None:
 			open(os.path.join(self.Directory, 'itss.ec'),'wb').write(self.EC.Data)
@@ -270,17 +259,11 @@ class ITSS(object):
 
 
 	def load(self):
-		assert(self.PrivateKey is None)
 		assert(self.EC is None)
 		assert(self.AT is None)
 
-		try:
-			self.PrivateKey = cryptography.hazmat.primitives.serialization.load_der_private_key(
-				open(os.path.join(self.Directory, 'itss.key'),'rb').read(),
-				password=b'strong-and-secret :-)',
-				backend=cryptography.hazmat.backends.default_backend()
-			)
-		except:
+		ok = self.HSM.load()
+		if not ok:
 			return False
 
 		try:
@@ -352,11 +335,12 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 	parser.add_argument('-e', '--ea-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Enrollment Authority')
 	parser.add_argument('-a', '--aa-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Authorization Authority')
 	parser.add_argument('-i', '--enrollment-id', help='Specify a custom enrollment ID')
+	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'emulated'], help='Use the HSM to store a private key.')
 	parser.add_argument('--g5-sim', default="224.1.1.1 5007 32 auto", help='Configuration of G5 simulator')
 
 	args = parser.parse_args()
 
-	itss_obj = ITSS(args.DIR, args.ea_url, args.aa_url)
+	itss_obj = ITSS(args.DIR, args.ea_url, args.aa_url, args.hsm)
 	ok = itss_obj.load()
 	store = False
 	if not ok:
@@ -404,7 +388,7 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 	async def periodic_sender():
 		while True:
 			smb = itss.CITS103097v121SecureMessageBuilder()
-			msg = smb.finish(itss_obj.AT, itss_obj.PrivateKey, "payload from '{}'".format(platform.node()))
+			msg = smb.finish(itss_obj.AT, itss_obj.HSM, "payload from '{}'".format(platform.node()))
 
 			g5sim.send(msg)
 			await asyncio.sleep(1)	

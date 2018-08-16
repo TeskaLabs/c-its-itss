@@ -130,7 +130,7 @@ class CITS103097v121SecureMessageBuilder(object):
 		return covered_by_signature, build_var_length_vectors_with_variable_length_encoding(tf)
 
 
-	def finish(self, autorization_ticket, private_key, payload):
+	def finish(self, autorization_ticket, hsm, payload):
 		msg = struct.pack(">B", self.Version)
 		msg += self._build_HeaderField(autorization_ticket)
 		
@@ -142,13 +142,7 @@ class CITS103097v121SecureMessageBuilder(object):
 		covered_by_signature, trailer = self._build_Trailer(0, 0)
 
 		# Trailer with signature / ecdsa_nistp256_with_sha256
-		signature_RFC3279 = private_key.sign(
-			msg + trailer[:covered_by_signature],
-			cryptography.hazmat.primitives.asymmetric.ec.ECDSA(
-				cryptography.hazmat.primitives.hashes.SHA256()
-			)
-		)
-		r, s = cryptography.hazmat.primitives.asymmetric.utils.decode_dss_signature(signature_RFC3279)
+		r, s = hsm.sign(msg + trailer[:covered_by_signature])
 		_, trailer = self._build_Trailer(r, s)
 
 		return msg + trailer
