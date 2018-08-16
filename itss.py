@@ -343,9 +343,9 @@ def main():
 		description=\
 '''C-ITS ITS-S reference implementation focused on a security.
 C-ITS standards: ETSI TS 102 941 v1.1.1, ETSI TS 103 097 v1.2.1
-It also contains a simple ITS-G5 network simulator that utilizes UDP IPv4 multicast.
+This tool also provides a simple ITS-G5 network simulator that utilizes UDP IPv4 multicast.
 
-Copyright (c) 2018 Ales Teska, TeskaLabs Ltd, MIT Licence
+Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 ''')
 
 	parser.add_argument('DIR', default='.', help='A directory with persistent storage of a keying material')
