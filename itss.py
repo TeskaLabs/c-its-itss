@@ -348,6 +348,7 @@ Copyright (c) 2018 Ales Teska, TeskaLabs Ltd, MIT Licence
 	parser.add_argument('DIR', default='.', help='A directory with persistent storage of a keying material')
 	parser.add_argument('-e', '--ea-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Enrollment Authority')
 	parser.add_argument('-a', '--aa-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Authorization Authority')
+	parser.add_argument('-i', '--enrollment-id', help='Specify a custom enrollment ID')
 	parser.add_argument('--g5-sim', default="224.1.1.1 5007 32 auto", help='Configuration of G5 simulator')
 
 	args = parser.parse_args()
@@ -362,7 +363,9 @@ Copyright (c) 2018 Ales Teska, TeskaLabs Ltd, MIT Licence
 	if itss_obj.EC is None:
 		# Enrollment Id is an pre-approved identification of the ITS-S from the manufacturer (e.g. Serial Number)
 		# It should also contain an information about the vendor
-		enrollment_id = 'itss.py/{}/{}'.format(platform.node(), uuid.uuid4())
+		enrollment_id = args.enrollment_id
+		if enrollment_id is None:
+				enrollment_id = 'itss.py/{}/{}'.format(platform.node(), uuid.uuid4())
 		itss_obj.enroll(enrollment_id)
 		store = True
 
@@ -398,7 +401,7 @@ Copyright (c) 2018 Ales Teska, TeskaLabs Ltd, MIT Licence
 	async def periodic_sender():
 		while True:
 			smb = itss.CITS103097v121SecureMessageBuilder()
-			msg = smb.finish(itss_obj.AT, itss_obj.PrivateKey, "payload")
+			msg = smb.finish(itss_obj.AT, itss_obj.PrivateKey, "payload from '{}'".format(platform.node()))
 
 			g5sim.send(msg)
 			await asyncio.sleep(1)	
