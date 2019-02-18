@@ -53,8 +53,15 @@ class ITSS(object):
 		elif hsm == 'cicada':
 			import itss.hsm_cicada
 			self.HSM = itss.hsm_cicada.CicadaHSM()
+		elif hsm == 'yubikey':
+			import itss.hsm_yubikey
+			self.HSM = itss.hsm_yubikey.YubikeyHSM()
 		else:
 			raise RuntimeError("Unknown/unsupported HSM '{}'".format(hsm))
+
+
+	def close(self):
+		self.HSM.close()
 
 
 	def generate_private_key(self):
@@ -230,6 +237,8 @@ class ITSS(object):
 
 		# Send request to Authorization Authority
 		r = requests.put(self.AA_url + '/cits/ts_102941_v111/aa/approve', data=encoded_ar)
+		if (r.status_code != 200):
+			raise RuntimeError("Server error when calling AA approve: {}".format(r.status_code))
 
 		AuthorizationResponse = self.asn1.decode('AuthorizationResponse', r.content)
 		if AuthorizationResponse[0] not in ('successfulExplicitAuthorization', 'successfulImplicitAuthorization'):
@@ -335,7 +344,7 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 	parser.add_argument('-e', '--ea-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Enrollment Authority')
 	parser.add_argument('-a', '--aa-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Authorization Authority')
 	parser.add_argument('-i', '--enrollment-id', help='Specify a custom enrollment ID')
-	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'emulated'], help='Use the HSM to store a private key.')
+	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'yubikey', 'emulated'], help='Use the HSM to store a private key.')
 	parser.add_argument('--g5-sim', default="224.1.1.1 5007 32 auto", help='Configuration of G5 simulator')
 
 	args = parser.parse_args()
@@ -402,6 +411,7 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 	except KeyboardInterrupt:
 		pass
 
+	itss.close()
 	loop.close()
 
 

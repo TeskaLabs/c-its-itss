@@ -80,6 +80,9 @@ class CITS103097v121SecureMessage(object):
 		else:
 			raise RuntimeError("Unsupported SignerInfo type {}".format(self.Headers['SignerInfo']['type']))
 
+		if signer_certificate is None:
+			raise RuntimeError("Unable to find the authorization ticket for a received message.")
+
 		s = int.from_bytes(self.Signature['ecdsa_signature']['s'], byteorder='big')
 		r = self.Signature['ecdsa_signature']['R']['x']
 
@@ -91,9 +94,6 @@ class CITS103097v121SecureMessage(object):
 				cryptography.hazmat.primitives.hashes.SHA256()
 			)
 		)
-
-		if signer_certificate is None:
-			raise RuntimeError("Unable to find the authorization ticket for a received message.")
 
 		return signer_certificate
 

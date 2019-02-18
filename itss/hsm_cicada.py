@@ -8,6 +8,8 @@ class CicadaHSM(HSM):
 		self._PrivateKey = None
 		self.P11URI = None
 
+		self.Label = "test-key"
+
 		backend = cryptography.hazmat.backends.default_backend()
 		backend._lib.ENGINE_load_dynamic()
 		engine = backend._lib.ENGINE_by_id(b"dynamic");
@@ -25,11 +27,14 @@ class CicadaHSM(HSM):
 
 
 	def generate_private_key(self):
+		'''
+		pkcs11-tool --module cicada-pkcs11.so --keypairgen --key-type EC:secp256r1 --label "test-key" --usage-sign
+		'''
 		print("Not implemented yet!")
 
 
 	def load(self):
-		p11uri = "pkcs11:object=test-key;type=private"
+		p11uri = "pkcs11:object={};type=private".format(self.Label)
 		backend = cryptography.hazmat.backends.default_backend()
 		pkey = backend._lib.ENGINE_load_private_key(
 			self.Engine,

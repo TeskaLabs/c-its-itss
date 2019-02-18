@@ -3,6 +3,11 @@ import abc
 
 class HSM(abc.ABC):
 
+
+	def close(self):
+		pass
+
+
 	def load(self):
 		'''
 		Load from persistent storage.
