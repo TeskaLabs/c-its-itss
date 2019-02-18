@@ -107,7 +107,7 @@ class CITS103097v121Certificate(object):
 		assert(len(self.Data) == fi.tell())
 
 		self.IsVerified = None
-		self.Digest = compute_HashedId8(self.Signature['ecdsa_signature']['R']['x'])
+		self.Digest = compute_HashedId8(self)
 
 
 	def __repr__(self):

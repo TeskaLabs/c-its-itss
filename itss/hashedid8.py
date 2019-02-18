@@ -2,6 +2,8 @@ import struct
 import hashlib
 import logging
 
+from .enums import EccPointType, PublicKeyAlgorithm
+
 #
 
 L = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ async def get_pubkey_by_HashedId8(app, hashedid8):
 	return cert.public_key()
 
 
-def compute_HashedId8(signature_r_x):
+def compute_HashedId8(certificate):
 	'''
 	Defined in ETSI TS 103 097 V1.2.1 (section 4.2.12)
 
@@ -36,32 +38,26 @@ def compute_HashedId8(signature_r_x):
 
 	Usage:
 
-	HashedId8 = compute_HashedId8(Signature['ecdsa_signature']['R']['x'])
+	HashedId8 = compute_HashedId8(certificate)
 
 	'''
 
-	#TODO: This is DER encoding ... likely different from CER encoding, which is required by specifications
+	# Strip a signature from a certificate data
+	canonical_cert_bytes = certificate.Data[:certificate.SignaturePosition]
 
-	encoded = signature_r_x.to_bytes(32, 'big')
-	if (encoded[0] & 0x80) == 0x80:
-		encoded = b'\0' + encoded
+	# Add a signature algorithm
+	assert(certificate.Signature['algorithm'] == PublicKeyAlgorithm.ecdsa_nistp256_with_sha256)
+	canonical_cert_bytes += struct.pack(">B", certificate.Signature['algorithm'])
 
-	encoded = struct.pack(">BB",
-		0x81, len(encoded)
-	) + encoded
+	# Add a signature EcdsaSignature 
+	r_x = certificate.Signature['ecdsa_signature']['R']['x']
+	canonical_cert_bytes += struct.pack(">B", EccPointType.x_coordinate_only) + r_x.to_bytes(32, 'big')
+	canonical_cert_bytes += certificate.Signature['ecdsa_signature']['s']
 
-	encoded = struct.pack(">BBBBB",
-		0x80, 0x01, 0x00, # x_coordinate_only
-		0xA1, len(encoded)
-	) + encoded
-
-	# Enclose in the array
-	encoded = struct.pack(">BB",
-		0x30, len(encoded)
-	) + encoded
-
+	# Calculate a SHA-256 hash from the whole certificate
 	m = hashlib.sha256()
-	m.update(encoded)
+	m.update(canonical_cert_bytes)
 	hashed = m.digest()
 
+	# HashedId8 takes the least significant eight bytes
 	return(hashed[-8:])
