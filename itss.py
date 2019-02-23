@@ -28,7 +28,6 @@ class ITSS(object):
 
 	fname = './ts_102941_v111.asn'
 	asn1 = asn1tools.compile_files(fname, 'der')
-	tenant = 'default'  # TODO: configs or user input
 
 	def __init__(self, tenant, directory, ea_url, aa_url, hsm):
 		self.EC = None # Enrollment credentials
