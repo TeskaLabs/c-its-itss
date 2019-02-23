@@ -336,7 +336,7 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 	parser.add_argument('-i', '--enrollment-id', help='Specify a custom enrollment ID')
 	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'emulated'], help='Use the HSM to store a private key.')
 	parser.add_argument('--g5-sim', default="224.1.1.1 5007 32 auto", help='Configuration of G5 simulator')
-	parser.add_argument('-t', '--tenant', default="default", help='Client tenant')
+	parser.add_argument('-t', '--tenant', default="cits", help='Client tenant')
 
 	args = parser.parse_args()
 
