@@ -29,8 +29,7 @@ class ITSS(object):
 	fname = './ts_102941_v111.asn'
 	asn1 = asn1tools.compile_files(fname, 'der')
 
-
-	def __init__(self, directory, ea_url, aa_url, hsm):
+	def __init__(self, tenant, directory, ea_url, aa_url, hsm):
 		self.EC = None # Enrollment credentials
 		self.AT = None # Authorization ticket
 
@@ -38,8 +37,8 @@ class ITSS(object):
 			os.mkdir(directory)
 		self.Directory = directory
 
-		self.AA_url = aa_url
-		self.EA_url = ea_url
+		self.AA_url = aa_url + '/' + tenant
+		self.EA_url = ea_url + '/' + tenant
 
 		self.Certs = {}
 
@@ -346,10 +345,11 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 	parser.add_argument('-i', '--enrollment-id', help='Specify a custom enrollment ID')
 	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'yubikey', 'emulated'], help='Use the HSM to store a private key.')
 	parser.add_argument('--g5-sim', default="224.1.1.1 5007 32 auto", help='Configuration of G5 simulator')
+	parser.add_argument('-t', '--tenant', default="c-its", help='Client tenant')
 
 	args = parser.parse_args()
 
-	itss_obj = ITSS(args.DIR, args.ea_url, args.aa_url, args.hsm)
+	itss_obj = ITSS(args.tenant, args.DIR, args.ea_url, args.aa_url, args.hsm)
 	ok = itss_obj.load()
 	store = False
 	if not ok:
@@ -391,8 +391,6 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 				traceback.print_exc()
 
 	g5sim = MyG5Simulator(loop, args.g5_sim)
-
-
 	# Send out some payload periodically
 	async def periodic_sender():
 		while True:
@@ -400,7 +398,8 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 			msg = smb.finish(itss_obj.AT, itss_obj.HSM, "payload from '{}'".format(platform.node()))
 
 			g5sim.send(msg)
-			await asyncio.sleep(1)	
+			await asyncio.sleep(1)
+	
 	asyncio.ensure_future(periodic_sender(), loop=loop)
 
 

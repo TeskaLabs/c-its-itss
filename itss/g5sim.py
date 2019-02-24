@@ -1,5 +1,6 @@
 import asyncio
 import socket
+import os
 
 
 class G5Simulator(object):
@@ -7,7 +8,7 @@ class G5Simulator(object):
 	def __init__(self, loop, config=""):
 		confp = config.split(' ')
 		if len(confp) == 0:
-			confp.append('224.1.1.1') # Default multicast group
+			confp.append('239.1.1.1') # Default multicast group
 		if len(confp) == 1:
 			confp.append('5007') # Default multicast port
 		if len(confp) == 2:
@@ -27,17 +28,21 @@ class G5Simulator(object):
 
 		self.ReceivingSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.ReceivingSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.ReceivingSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+
 		self.ReceivingSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
 		self.ReceivingSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 0)
-		self.ReceivingSocket.bind((self.mcast_grp, self.mcast_port))	
+		if os.name != 'nt':
+			self.ReceivingSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+
+		self.ReceivingSocket.bind(('0.0.0.0', self.mcast_port))
 		self.ReceivingSocket.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, socket.inet_aton(self.mcast_if))
 		self.ReceivingSocket.setsockopt(socket.SOL_IP, socket.IP_ADD_MEMBERSHIP, socket.inet_aton(self.mcast_grp) + socket.inet_aton(self.mcast_if))
 
 		self.SendingSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 		self.SendingSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.SendingSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 		self.SendingSocket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 32)
+		if os.name != 'nt':
+			self.SendingSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
 		asyncio.ensure_future(self._run(loop), loop=loop)
 
