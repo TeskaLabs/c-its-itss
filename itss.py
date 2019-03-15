@@ -26,7 +26,7 @@ import itss
 class ITSS(object):
 
 
-	fname = './ts_102941_v111.asn'
+	fname = './ts_102941_v111_cz.asn'
 	asn1 = asn1tools.compile_files(fname, 'der')
 
 	def __init__(self, tenant, directory, ea_url, aa_url, hsm):
@@ -37,8 +37,8 @@ class ITSS(object):
 			os.mkdir(directory)
 		self.Directory = directory
 
-		self.AA_url = aa_url + '/' + tenant
-		self.EA_url = ea_url + '/' + tenant
+		self.AA_url = aa_url + (('/' + tenant) if tenant is not None else '')
+		self.EA_url = ea_url + (('/' + tenant) if tenant is not None else '')
 
 		self.Certs = {}
 
@@ -164,6 +164,7 @@ class ITSS(object):
 		# Send request to Enrollment Authority
 		r = requests.put(self.EA_url + '/cits/ts_102941_v111/ea/enroll', data=encoded_er)
 		
+		print(">>>", self.EA_url + '/cits/ts_102941_v111/ea/enroll')
 		EnrolmentResponse = self.asn1.decode('EnrolmentResponse', r.content)
 		if EnrolmentResponse[0] != 'successfulEnrolment':
 			print("Enrollment failed!")
@@ -336,16 +337,16 @@ def main():
 C-ITS standards: ETSI TS 102 941 v1.1.1, ETSI TS 103 097 v1.2.1
 This tool also provides a simple ITS-G5 network simulator that utilizes UDP IPv4 multicast.
 
-Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
+Copyright (c) 2018-2019 TeskaLabs Ltd, MIT Licence
 ''')
 
 	parser.add_argument('DIR', default='.', help='A directory with persistent storage of a keying material')
-	parser.add_argument('-e', '--ea-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Enrollment Authority')
-	parser.add_argument('-a', '--aa-url', default="https://via.teskalabs.com/croads/demo-ca", help='URL of the Authorization Authority')
-	parser.add_argument('-i', '--enrollment-id', help='Specify a custom enrollment ID')
-	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'yubikey', 'emulated'], help='Use the HSM to store a private key.')
-	parser.add_argument('--g5-sim', default="224.1.1.1 5007 32 auto", help='Configuration of G5 simulator')
-	parser.add_argument('-t', '--tenant', default="c-its", help='Client tenant')
+	parser.add_argument('-e', '--ea-url', default="https://via.teskalabs.com", help='Base URL of the Enrollment Authority')
+	parser.add_argument('-a', '--aa-url', default="https://via.teskalabs.com", help='Base URL of the Authorization Authority')
+	parser.add_argument('-i', '--enrollment-id', help='specify a custom enrollment ID')
+	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'yubikey', 'emulated'], help='specify the HSM to use for a private key.')
+	parser.add_argument('--g5-sim', default="239.1.1.1 5007 32 auto", help='specify a configuration of G5 simulator')
+	parser.add_argument('-t', '--tenant', default='c-its', help='specify a SeaCat tenant')
 
 	args = parser.parse_args()
 
@@ -401,7 +402,6 @@ Copyright (c) 2018 TeskaLabs Ltd, MIT Licence
 			await asyncio.sleep(1)
 	
 	asyncio.ensure_future(periodic_sender(), loop=loop)
-
 
 	print("Ready.")
 
