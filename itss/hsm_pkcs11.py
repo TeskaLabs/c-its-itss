@@ -4,7 +4,7 @@ import cryptography.hazmat.primitives.serialization
 
 from .hsm_abc import HSM
 
-class YubikeyHSM(HSM):
+class PKCS11HSM(HSM):
 
 	def __init__(self):
 		self._privateKey = None

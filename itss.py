@@ -52,9 +52,9 @@ class ITSS(object):
 		elif hsm == 'cicada':
 			import itss.hsm_cicada
 			self.HSM = itss.hsm_cicada.CicadaHSM()
-		elif hsm == 'yubikey':
-			import itss.hsm_yubikey
-			self.HSM = itss.hsm_yubikey.YubikeyHSM()
+		elif hsm == 'pkcs11':
+			import itss.hsm_pkcs11
+			self.HSM = itss.hsm_pkcs11.PKCS11HSM()
 		else:
 			raise RuntimeError("Unknown/unsupported HSM '{}'".format(hsm))
 
@@ -344,7 +344,7 @@ Copyright (c) 2018-2019 TeskaLabs Ltd, MIT Licence
 	parser.add_argument('-e', '--ea-url', default="https://via.teskalabs.com", help='Base URL of the Enrollment Authority')
 	parser.add_argument('-a', '--aa-url', default="https://via.teskalabs.com", help='Base URL of the Authorization Authority')
 	parser.add_argument('-i', '--enrollment-id', help='specify a custom enrollment ID')
-	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'yubikey', 'emulated'], help='specify the HSM to use for a private key.')
+	parser.add_argument('-H', '--hsm', default="emulated", choices=['cicada', 'pkcs11', 'emulated'], help='specify the HSM to use for a private key.')
 	parser.add_argument('--g5-sim', default="239.1.1.1 5007 32 auto", help='specify a configuration of G5 simulator')
 	parser.add_argument('-t', '--tenant', default='c-its', help='specify a SeaCat tenant')
 
