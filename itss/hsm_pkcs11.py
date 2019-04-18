@@ -1,5 +1,6 @@
-import PyKCS11
+import hashlib
 
+import PyKCS11
 import cryptography.hazmat.primitives.serialization
 
 from .hsm_abc import HSM
@@ -9,7 +10,7 @@ class PKCS11HSM(HSM):
 	def __init__(self):
 		self._privateKey = None
 		self._pkcs11 = PyKCS11.PyKCS11Lib()
-		self._pkcs11.load(pkcs11dll_filename="/Applications/YubiKey PIV Manager.app/Contents/MacOS/libykcs11.1.dylib")
+		self._pkcs11.load(pkcs11dll_filename="/usr/lib/cicada-pkcs11.so")
 		self._session = None
 
 
@@ -26,7 +27,7 @@ class PKCS11HSM(HSM):
 	def load(self):
 		self._slot = self._pkcs11.getSlotList(tokenPresent=True)[0]
 		self._session = self._pkcs11.openSession(self._slot, PyKCS11.CKF_SERIAL_SESSION)
-		self._session.login("11223344")
+		self._session.login("1234")
 
 		self._publicKey = self._session.findObjects([(PyKCS11.CKA_CLASS, PyKCS11.CKO_PUBLIC_KEY)])[0]
 		self._privateKey = self._session.findObjects([(PyKCS11.CKA_CLASS, PyKCS11.CKO_PRIVATE_KEY)])[0]
@@ -52,6 +53,8 @@ class PKCS11HSM(HSM):
 
 
 	def sign(self, payload):
-		rs = self._session.sign(self._privateKey, payload, mecha=PyKCS11.Mechanism(PyKCS11.CKM_ECDSA_SHA256, None))
+		m = hashlib.sha256()
+		m.update(payload)
+		rs = self._session.sign(self._privateKey, m.digest(), mecha=PyKCS11.Mechanism(PyKCS11.CKM_ECDSA, None))
 		r, s = int.from_bytes(rs[:32], "big"), int.from_bytes(rs[32:], "big")
 		return r, s

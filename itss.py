@@ -165,6 +165,9 @@ class ITSS(object):
 		r = requests.put(self.EA_url + '/cits/ts_102941_v111/ea/enroll', data=encoded_er)
 		
 		print(">>>", self.EA_url + '/cits/ts_102941_v111/ea/enroll')
+		if r.status_code != 200:
+			print(r.text)
+			sys.exit(1)
 		EnrolmentResponse = self.asn1.decode('EnrolmentResponse', r.content)
 		if EnrolmentResponse[0] != 'successfulEnrolment':
 			print("Enrollment failed!")
